@@ -10,7 +10,8 @@ packages = [{include = "project_1", from = "src"}]
 requires-python = ">=3.13"
 dependencies = [
     "requests (>=2.32.5,<3.0.0)",
-    "datetime (>=6.0,<7.0)"
+    "datetime (>=6.0,<7.0)",
+    "pandas (>=2.3.3,<3.0.0)"
 ]
 
 
