@@ -10,7 +10,9 @@ from project_1.utils import (
     get_top_transactions,
     get_currency_rates,
     get_stock_prices,
-    path_json
+    get_expenses,
+    get_income,
+    path_json, get_data_time_with_range
 )
 
 
@@ -31,9 +33,9 @@ def main_info(date_time: str)->Dict[str, Any]:
 
     data = {
         'greeting': greeting,
-        # 'cards': cards,
-        # 'top_transactions': top_transactions,
-        # 'currency_rates': currency_rates,
+        'cards': cards,
+        'top_transactions': top_transactions,
+        'currency_rates': currency_rates,
         'stock_prices': stock_prices
     }
     json_data = json.dumps(data, ensure_ascii=False, indent=4)
@@ -41,4 +43,16 @@ def main_info(date_time: str)->Dict[str, Any]:
 
     return json_data
 
+
+def even_info(date_time: str, range: str="Y")->Dict[str, Any]:
+    '''
+    Принимает на вход строку с датой и диапазоном времени (необязательно) и возвращает
+    JSON-ответ
+    '''
+    time_period = get_data_time_with_range(date_time, range=range)
+    sorted_df = get_table_period("../../data/operations.xlsx", period=time_period)
+    expenses = get_expenses(sorted_df)
+    income = get_income(sorted_df)
+
+even_info("2018-01-04 21:30:00")
 

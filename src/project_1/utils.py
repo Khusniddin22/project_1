@@ -1,16 +1,16 @@
 import datetime
-from datetime import date, timedelta
 import json
 import os
 import logging
-from multiprocessing.util import DEBUG
-
 import requests
 import pandas as pd
-from pandas import DataFrame
 
+from pandas import DataFrame
+from datetime import date, timedelta
 from dotenv import load_dotenv
+
 load_dotenv(".env")
+
 
 logger_utils = logging.getLogger("utils")
 logger_utils.setLevel(logging.DEBUG) #Устанавливаем уровень логирования
@@ -24,6 +24,8 @@ logger_utils.addHandler(file_handler) #Добавляем обработчик �
 path_file = os.path.join('..', '..', 'data', 'operations.xlsx')
 path_json = os.path.join('..', '..', 'data', 'user_settings.json')
 
+
+# Функции для страницы "Главная"
 
 def time_for_greeting()->str:
     '''Функция приветствия относительно текущего часа'''
@@ -75,14 +77,20 @@ def get_table_period(path_file: str, period: list)->DataFrame:
         df_excel['Дата операции'] = pd.to_datetime(df_excel['Дата операции'], dayfirst=True)
 
         #задаем начало и конец периода, взяв список дат из get_data_time
-        beginning_date = datetime.datetime.strptime(period[0], "%d.%m.%Y %H:%M:%S")
-        end_date = datetime.datetime.strptime(period[1], "%d.%m.%Y %H:%M:%S")
+        if len(period) < 2:
+            end_date = datetime.datetime.strptime(period[0], "%d.%m.%Y %H:%M:%S")
+        else:
+            beginning_date = datetime.datetime.strptime(period[0], "%d.%m.%Y %H:%M:%S")
+            end_date = datetime.datetime.strptime(period[1], "%d.%m.%Y %H:%M:%S")
 
         #создаем отфильтрованную таблицу в диапазоне периода
-        df_filetered_excel = df_excel[
-            (df_excel['Дата операции'] >= beginning_date) &
-            (df_excel['Дата операции'] <= end_date)
-        ]
+        if len(period) < 2:
+            df_filetered_excel = df_excel[df_excel['Дата операции'] <= end_date]
+        else:
+            df_filetered_excel = df_excel[
+                (df_excel['Дата операции'] >= beginning_date) &
+                (df_excel['Дата операции'] <= end_date)
+            ]
 
         #сортируем отфильтрованную таблицу по возрастанию дат
         df_sorted = df_filetered_excel.sort_values(by='Дата операции')
@@ -253,3 +261,137 @@ def get_stock_prices(path_json: str)->list[dict]:
     except Exception as e:
         logger_utils.error(
             f"Произошла непредвиденная ошибка при чтении файла {path_file}: {e}. Возвращается пустой список.")
+
+
+
+# Функции для страницы "События"
+
+def get_data_time_with_range(date_time: str, date_format: str="%Y-%m-%d %H:%M:%S", range: str="M")->list[str]:
+    '''
+    Функция принимает строку с датой, форматом и диапазон (по умолчанию месяц) и
+    возвращает период времени с заданным диапазоном
+    '''
+
+    logger_utils.debug(f"Вызвана функция get_data_time_with_range с аргументами {date_time}, {date_format}, {range}")
+    dt = datetime.datetime.strptime(date_time, date_format)
+    if range == "W":
+        day_of_week = dt.weekday()
+        # Вычисляем начало недели: вычитаем количество дней, прошедших с понедельника
+        start_of_week = dt - timedelta(days=day_of_week)
+        start_of_week = start_of_week.replace(hour=0, minute=0, second=0)
+        return [
+            start_of_week.strftime("%d.%m.%Y %H:%M:%S"),
+            dt.strftime("%d.%m.%Y %H:%M:%S")
+        ]
+    elif range == "M":
+        start_of_month = dt.replace(day=1, hour=0, minute=0, second=0)
+        return [
+            start_of_month.strftime("%d.%m.%Y %H:%M:%S"),
+            dt.strftime("%d.%m.%Y %H:%M:%S")
+        ]
+    elif range == "Y":
+        start_of_year = dt.replace(month=1, day=1, hour=0, minute=0, second=0)
+        return [
+            start_of_year.strftime("%d.%m.%Y %H:%M:%S"),
+            dt.strftime("%d.%m.%Y %H:%M:%S")
+        ]
+    else:
+        return [dt.strftime("%d.%m.%Y %H:%M:%S")]
+
+
+
+def get_expenses(df_sorted: DataFrame)->dict:
+    '''
+    Функция принимает таблицу Dataframe и
+    возвращает список общей суммы затрат, затрат по категориям
+    '''
+
+    logger_utils.debug(f"Вызвана функция get_expenses с аргументами")
+    expenses = {}
+    total_amount = 0
+    category_expenses = []
+    transfers_and_cash = []
+    df_filtered = df_sorted[
+        ['Сумма операции',
+        'Категория']
+    ]
+
+    # Находим общую сумму расходов (пополнения не учитываем)
+    for index, row in df_filtered.iterrows():
+        if row['Сумма операции'] < 0:
+            total_amount += abs(row['Сумма операции'])
+
+    # Находим список категорий
+    list_of_categories = []
+    transfers_and_cash_categories = []
+    for index, row in df_filtered.iterrows():
+        if row['Категория'] not in list_of_categories:
+            # добавляем все категории в список кроме "Переводы" и "Наличные"
+            if row['Категория'] not in ('Переводы', 'Наличные'):
+                list_of_categories.append(row['Категория'])
+            else:
+                transfers_and_cash_categories.append(row['Категория'])
+
+    # Создаем список инфы расходов по категориям
+    for category in list_of_categories:
+        amount_of_category = 0
+        for index, row in df_filtered.iterrows():
+            if row['Сумма операции'] < 0:
+                if category == row['Категория']:
+                    amount_of_category += row["Сумма операции"]
+        category_dict = {
+            "category": category,
+            "amount": abs(amount_of_category)
+        }
+        category_expenses.append(category_dict)
+    sorted(category_expenses, key=lambda x: x['amount'], reverse=True)
+
+    # Если кол-во категорий больше 7, то наименьшие траты попадают в категорию "Остальное"
+    if len(category_expenses) > 7:
+        other_category = category_expenses[7:]
+        amount_other = sum(categ['amount'] for categ in other_category)
+        other_category_dict = {
+            'category': 'Остальное',
+            'amount': amount_other
+        }
+        category_expenses = category_expenses[:7]
+        category_expenses.append(other_category_dict)
+
+    # Создаем список инфы расходов "наличных" и "переводов"
+    for category in transfers_and_cash_categories:
+        amount_of_category = 0
+        for index, row in df_filtered.iterrows():
+            if row['Сумма операции'] < 0:
+                if category == row['Категория']:
+                    amount_of_category += row["Сумма операции"]
+        category_dict = {
+            "category": category,
+            "amount": abs(amount_of_category)
+        }
+        transfers_and_cash.append(category_dict)
+
+    sorted(transfers_and_cash, key=lambda x: x['amount'], reverse=True)
+
+    expenses = {
+        'total_amount': total_amount,
+        'main': category_expenses,
+        'transfers_and_cash': transfers_and_cash
+    }
+
+    return expenses
+
+
+def get_income(df_sorted: DataFrame)->dict:
+    '''
+    Функция принимает таблицу (DataFrame) и
+    возвращает
+    '''
+
+
+
+
+
+
+
+
+
