@@ -41,8 +41,9 @@ def main_info(date_time: str)->Dict[str, Any]:
     json_data = json.dumps(data, ensure_ascii=False, indent=4)
 
 
-    return json_data
+    print(time_period)
 
+main_info("2018-05-20 15:30:00")
 
 def even_info(date_time: str, range: str="Y")->Dict[str, Any]:
     '''
@@ -53,6 +54,16 @@ def even_info(date_time: str, range: str="Y")->Dict[str, Any]:
     sorted_df = get_table_period("../../data/operations.xlsx", period=time_period)
     expenses = get_expenses(sorted_df)
     income = get_income(sorted_df)
+    currency_rates = get_currency_rates(path_json)
+    stock_prices = get_stock_prices(path_json)
+    data = {
+        'expenses': expenses,
+        'income': income,
+        'currency_rates': currency_rates,
+        'stock_prices': stock_prices
+    }
 
-even_info("2018-01-04 21:30:00")
+    json_data = json.dumps(data, ensure_ascii=False, indent=4)
+
+    return json_data
 

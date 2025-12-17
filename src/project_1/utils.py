@@ -306,8 +306,7 @@ def get_expenses(df_sorted: DataFrame)->dict:
     возвращает список общей суммы затрат, затрат по категориям
     '''
 
-    logger_utils.debug(f"Вызвана функция get_expenses с аргументами")
-    expenses = {}
+    logger_utils.debug(f"Вызвана функция get_expenses с аргументами df_sorted")
     total_amount = 0
     category_expenses = []
     transfers_and_cash = []
@@ -325,9 +324,9 @@ def get_expenses(df_sorted: DataFrame)->dict:
     list_of_categories = []
     transfers_and_cash_categories = []
     for index, row in df_filtered.iterrows():
-        if row['Категория'] not in list_of_categories:
+        if (row['Категория'] not in list_of_categories) and (row['Категория'] not in transfers_and_cash_categories) and (row['Сумма операции'] < 0):
             # добавляем все категории в список кроме "Переводы" и "Наличные"
-            if row['Категория'] not in ('Переводы', 'Наличные'):
+            if row['Категория'] not in ['Переводы', 'Наличные']:
                 list_of_categories.append(row['Категория'])
             else:
                 transfers_and_cash_categories.append(row['Категория'])
@@ -341,10 +340,11 @@ def get_expenses(df_sorted: DataFrame)->dict:
                     amount_of_category += row["Сумма операции"]
         category_dict = {
             "category": category,
-            "amount": abs(amount_of_category)
+            "amount": abs(round(amount_of_category, 2))
         }
         category_expenses.append(category_dict)
-    sorted(category_expenses, key=lambda x: x['amount'], reverse=True)
+
+    category_expenses = sorted(category_expenses, key=lambda expensy: expensy['amount'], reverse=True)
 
     # Если кол-во категорий больше 7, то наименьшие траты попадают в категорию "Остальное"
     if len(category_expenses) > 7:
@@ -366,27 +366,66 @@ def get_expenses(df_sorted: DataFrame)->dict:
                     amount_of_category += row["Сумма операции"]
         category_dict = {
             "category": category,
-            "amount": abs(amount_of_category)
+            "amount": abs(round(amount_of_category, 2))
         }
         transfers_and_cash.append(category_dict)
 
     sorted(transfers_and_cash, key=lambda x: x['amount'], reverse=True)
 
+
     expenses = {
-        'total_amount': total_amount,
+        'total_amount': round(total_amount, 2),
         'main': category_expenses,
         'transfers_and_cash': transfers_and_cash
     }
 
+    logger_utils.info("Успешно записана информация по затратам")
     return expenses
 
 
 def get_income(df_sorted: DataFrame)->dict:
     '''
     Функция принимает таблицу (DataFrame) и
-    возвращает
+    возвращает поступления на карту
     '''
+    logger_utils.debug(f"Вызвана функция get_income с аргументами df_sorted")
+    total_amount = 0
+    category_income = []
+    df_filtered = df_sorted[
+        ['Сумма операции',
+         'Категория']
+    ]
 
+    for index, row in df_filtered.iterrows():
+        if row['Сумма операции'] > 0:
+            total_amount += abs(row['Сумма операции'])
+
+    # Находим список категорий
+    list_of_categories = []
+    for index, row in df_filtered.iterrows():
+        if (row['Категория'] not in list_of_categories) and (row['Сумма операции'] > 0):
+            list_of_categories.append(row['Категория'])
+
+    # Создаем список инфы расходов по категориям
+    for category in list_of_categories:
+        amount_of_category = 0
+        for index, row in df_filtered.iterrows():
+            if row['Сумма операции'] > 0:
+                if category == row['Категория']:
+                    amount_of_category += row["Сумма операции"]
+        category_dict = {
+            "category": category,
+            "amount": abs(amount_of_category)
+        }
+        category_income.append(category_dict)
+    sorted(category_income, key=lambda x: x['amount'], reverse=True)
+
+    income = {
+        'total_amount': total_amount,
+        'main': category_income,
+    }
+
+    return income
 
 
 
