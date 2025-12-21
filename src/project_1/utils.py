@@ -97,10 +97,13 @@ def get_table_period(path_file: str, period: list)->DataFrame:
         logger_utils.info(f"Файл успешно считан и функция возвращает отсортированную таблицу")
         return df_sorted
     except FileNotFoundError:
-        logger_utils.error(f"Файл {path_file} не найден. Возвращается пустой список")
-        return []
+        logger_utils.error(f"Файл {path_file} не найден. Возвращается пустой DataFrame")
+        return pd.DataFrame()
+    except ValueError as ve:
+        logger_utils.error(f"Ошибка в формате даты или пустой период для {path_file}: {ve}. Возвращается пустой DataFrame.")
     except Exception as e:
         logger_utils.error(f"Произошла ошибка при чтении файла {path_file}: {e}. Возвращается пустой список")
+        return pd.DataFrame()
 
 
 def get_cost_of_card(df_sorted: DataFrame)->list[dict]:
@@ -110,6 +113,13 @@ def get_cost_of_card(df_sorted: DataFrame)->list[dict]:
     последние 4 цифры карты, сумма затрат и общий кешбэк
     '''
     logger_utils.debug(f"Вызвана функция get_table_period с аргументом {df_sorted}")
+    # Необходимые колонки
+    required_cols = ['Номер карты', 'Сумма операции с округлением', 'Кэшбэк', 'Сумма операции']
+    for col in required_cols:
+        if col not in df_sorted.columns:
+            logger_utils.error(f"Отсутствует необходимая колонка '{col}' в DataFrame для get_top_transactions.")
+            return []
+
     card_transactions = []
     card_sorted = df_sorted[
         [
@@ -123,12 +133,12 @@ def get_cost_of_card(df_sorted: DataFrame)->list[dict]:
     for index, row in card_sorted.iterrows():
         if row['Сумма операции'] < 0:
             last_digits = str(row['Номер карты']).replace('*', '')
-            total_spent = row['Сумма операции с округлением']
-            cashback = total_spent / 100
+            total_spent = abs(round(row['Сумма операции с округлением'], 2))
+            cashback = round(total_spent / 100, 2)
             card_info = {
                 'last_digits': f'{last_digits}',
-                'total_spent': f'{total_spent}',
-                'cashback': f'{cashback}'
+                'total_spent': total_spent,
+                'cashback': cashback
             }
             card_transactions.append(card_info)
 
@@ -143,8 +153,16 @@ def get_top_transactions(df_sorted: DataFrame, number)->list[dict]:
     '''
     logger_utils.info(f"Вызвана функция get_top_transactions с аргументами {df_sorted}, {number}")
     top_transactions = []
-    df_sorted_pay = df_sorted.sort_values(by='Сумма операции', ascending=False)
 
+    # Необходимые колонки
+    required_cols = ['Дата платежа', 'Сумма операции', 'Категория', 'Описание']
+    for col in required_cols:
+        if col not in df_sorted.columns:
+            logger_utils.error(f"Отсутствует необходимая колонка '{col}' в DataFrame для get_top_transactions.")
+            return []
+
+    df_sorted_pay = df_sorted[df_sorted['Сумма операции'] < 0]
+    df_sorted_pay = df_sorted_pay.sort_values(by='Сумма операции', ascending=True)
     #оставляем в выборке только number строк таблицы
     top_pay = df_sorted_pay.head(number)
 
@@ -165,7 +183,6 @@ def get_top_transactions(df_sorted: DataFrame, number)->list[dict]:
             'description': row['Описание']
         }
         top_transactions.append(top_info)
-
     logger_utils.info(f"Успешно записана информация по транзакциям")
     return top_transactions
 
@@ -208,12 +225,14 @@ def get_currency_rates(path_json: str)->list[dict]:
         logger_utils.info(f"Успешно загружена информация о курсах валют")
         return currency_rates
     except json.JSONDecodeError:
-        logger_utils.error(f"Некорректный формат JSON в файле {path_file}. Возвращается пустой список.")
+        logger_utils.error(f"Некорректный формат JSON в файле {path_json}. Возвращается пустой список.")
         return []
     except FileNotFoundError:
         logger_utils.error(f"Ошибка чтении файла: файл {path_json} не найден")
+        return []
     except Exception as e:
-        logger_utils.error(f"Произошла непредвиденная ошибка при чтении файла {path_file}: {e}. Возвращается пустой список.")
+        logger_utils.error(f"Произошла непредвиденная ошибка при чтении файла {path_json}: {e}. Возвращается пустой список.")
+        return []
 
 
 def get_stock_prices(path_json: str)->list[dict]:
@@ -370,7 +389,7 @@ def get_expenses(df_sorted: DataFrame)->dict:
         }
         transfers_and_cash.append(category_dict)
 
-    sorted(transfers_and_cash, key=lambda x: x['amount'], reverse=True)
+    transfers_and_cash = sorted(transfers_and_cash, key=lambda x: x['amount'], reverse=True)
 
 
     expenses = {
@@ -418,7 +437,7 @@ def get_income(df_sorted: DataFrame)->dict:
             "amount": abs(amount_of_category)
         }
         category_income.append(category_dict)
-    sorted(category_income, key=lambda x: x['amount'], reverse=True)
+    category_income = sorted(category_income, key=lambda x: x['amount'], reverse=True)
 
     income = {
         'total_amount': total_amount,

@@ -39,23 +39,22 @@ def main_info(date_time: str)->Dict[str, Any]:
         'stock_prices': stock_prices
     }
     json_data = json.dumps(data, ensure_ascii=False, indent=4)
+    return json_data
 
 
-    print(time_period)
-
-main_info("2018-05-20 15:30:00")
-
-def even_info(date_time: str, range: str="Y")->Dict[str, Any]:
+def even_info(date_time: str, range: str="M")->Dict[str, Any]:
     '''
     Принимает на вход строку с датой и диапазоном времени (необязательно) и возвращает
     JSON-ответ
     '''
     time_period = get_data_time_with_range(date_time, range=range)
     sorted_df = get_table_period("../../data/operations.xlsx", period=time_period)
+
     expenses = get_expenses(sorted_df)
     income = get_income(sorted_df)
     currency_rates = get_currency_rates(path_json)
     stock_prices = get_stock_prices(path_json)
+
     data = {
         'expenses': expenses,
         'income': income,
