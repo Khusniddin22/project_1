@@ -83,14 +83,14 @@ def get_table_period(path_file: str, period: list) -> DataFrame:
 
         # создаем отфильтрованную таблицу в диапазоне периода
         if len(period) < 2:
-            df_filetered_excel = df_excel[df_excel["Дата операции"] <= end_date]
+            df_filtered_excel = df_excel[df_excel["Дата операции"] <= end_date]
         else:
-            df_filetered_excel = df_excel[
+            df_filtered_excel = df_excel[
                 (df_excel["Дата операции"] >= beginning_date) & (df_excel["Дата операции"] <= end_date)
             ]
 
         # сортируем отфильтрованную таблицу по возрастанию дат
-        df_sorted = df_filetered_excel.sort_values(by="Дата операции")
+        df_sorted = df_filtered_excel.sort_values(by="Дата операции")
         logger_utils.info("Файл успешно считан и функция возвращает отсортированную таблицу")
         return df_sorted
     except FileNotFoundError:
@@ -267,7 +267,6 @@ def get_stock_prices(path_json: str) -> list[dict]:
 
 # Функции для страницы "События"
 
-
 def get_data_time_with_range(date_time: str, date_format: str = "%Y-%m-%d %H:%M:%S", range: str = "M") -> list[str]:
     """
     Функция принимает строку с датой, форматом и диапазон (по умолчанию месяц) и
@@ -403,3 +402,26 @@ def get_income(df_sorted: DataFrame) -> dict:
     }
 
     return income
+
+
+#  --- Функции для Сервисов ---
+
+def get_transactions_for_investment(path: str)->list[dict[str, any]]:
+    """
+    Функция возвращает список словарей с полями датой и суммой операции
+    """
+    df = pd.read_excel(path)
+    # Меняем строковый данные колонки "Дата операции" из Excel в datetime
+    df["Дата операции"] = pd.to_datetime(df["Дата операции"],format="%d.%m.%Y %H:%M:%S").dt.date
+
+    # создаем отфильтрованный df с затратами
+    df_filtered = df[df["Сумма операции"] < 0]
+    transactions = []
+    for index, row in df_filtered.iterrows():
+        transact_dict = {
+            str(row["Дата операции"]): abs(row["Сумма операции"])
+        }
+        transactions.append(transact_dict)
+
+    return transactions
+
