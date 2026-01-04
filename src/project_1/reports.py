@@ -48,7 +48,6 @@ def spending_by_weekday(transactions: pd.DataFrame,
     else:
         to_day = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
     end_date = to_day.strftime("%d.%m.%Y %H:%M:%S")
-
     starting_date = get_last_three_month(str(to_day))
     starting_date = starting_date.strftime("%d.%m.%Y %H:%M:%S")
 
