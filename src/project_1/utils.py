@@ -2,7 +2,9 @@ import datetime
 import json
 import logging
 import os
+import time
 from datetime import date, timedelta
+from typing import Optional
 
 import pandas as pd
 import requests
@@ -424,4 +426,21 @@ def get_transactions_for_investment(path: str)->list[dict[str, any]]:
         transactions.append(transact_dict)
 
     return transactions
+
+
+def get_df_transactions(path: str)->pd.DataFrame:
+    """
+    Функция возвращает датафрейм с транзакциями для функций отчетов
+    """
+    df = pd.read_excel(path)
+    return df
+
+
+def get_last_three_month(date_time: str):
+
+    last_time = datetime.datetime.strptime(date_time, "%Y-%m-%d %H:%M:%S")
+    first_month = last_time - datetime.timedelta(days=90)
+    return first_month
+
+
 

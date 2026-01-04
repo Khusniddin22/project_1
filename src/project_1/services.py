@@ -26,8 +26,8 @@ def profitable_cashback(path_file: str, year: int, month: int)-> str:
     result = cashback_categories.to_dict()
     return json.dumps(result, ensure_ascii=False, indent=4)
 
+#print(profitable_cashback(path_file, 2018, 4))
 
-#investment_transactions = get_transactions_for_investment(path_file)
 #investment_transactions = [{'2018-01-03': 73.06}, {'2018-01-03': 21.0}, {'2018-01-01': 316.0}, {'2018-01-01': 3000.0}]
 
 def investment_bank(month: str, transactions: list[dict[str, any]], limit: int)->float:
@@ -68,7 +68,6 @@ def simple_search(search_str: str)->list:
                 'Валюта платежа': row['Валюта платежа'],
                 'Кэшбэк': row['Кэшбэк'],
                 'Категория': row['Категория'],
-                'MCC': row['MCC'],
                 'Описание': row['Описание'],
                 'Округление на инвесткопилку': row['Округление на инвесткопилку'],
                 'Сумма операции с округлением': row['Сумма операции с округлением']
@@ -78,7 +77,7 @@ def simple_search(search_str: str)->list:
     return result
 
 
-def phone_search(search_str: str)->list:
+def phone_search(search_str: str)->list[dict]:
     """
     Выдает JSON-ответ со всеми транзакциями, содержащими в запросе номер телефона
     """
@@ -111,7 +110,7 @@ def phone_search(search_str: str)->list:
     return result
 
 
-def phone_search(search_str: str)->list:
+def name_search(search_str: str)->list[dict]:
     """
     Функция возвращает JSON со всеми транзакциями, которые относятся к переводам физлицам
     """
