@@ -269,6 +269,7 @@ def get_stock_prices(path_json: str) -> list[dict]:
 
 # Функции для страницы "События"
 
+
 def get_data_time_with_range(date_time: str, date_format: str = "%Y-%m-%d %H:%M:%S", range: str = "M") -> list[str]:
     """
     Функция принимает строку с датой, форматом и диапазон (по умолчанию месяц) и
@@ -408,27 +409,26 @@ def get_income(df_sorted: DataFrame) -> dict:
 
 #  --- Функции для Сервисов ---
 
-def get_transactions_for_investment(path: str)->list[dict[str, any]]:
+
+def get_transactions_for_investment(path: str) -> list[dict[str, any]]:
     """
     Функция возвращает список словарей с полями датой и суммой операции
     """
     df = pd.read_excel(path)
     # Меняем строковый данные колонки "Дата операции" из Excel в datetime
-    df["Дата операции"] = pd.to_datetime(df["Дата операции"],format="%d.%m.%Y %H:%M:%S").dt.date
+    df["Дата операции"] = pd.to_datetime(df["Дата операции"], format="%d.%m.%Y %H:%M:%S").dt.date
 
     # создаем отфильтрованный df с затратами
     df_filtered = df[df["Сумма операции"] < 0]
     transactions = []
     for index, row in df_filtered.iterrows():
-        transact_dict = {
-            str(row["Дата операции"]): abs(row["Сумма операции"])
-        }
+        transact_dict = {str(row["Дата операции"]): abs(row["Сумма операции"])}
         transactions.append(transact_dict)
 
     return transactions
 
 
-def get_df_transactions(path: str)->pd.DataFrame:
+def get_df_transactions(path: str) -> pd.DataFrame:
     """
     Функция возвращает датафрейм с транзакциями для функций отчетов
     """
@@ -441,6 +441,3 @@ def get_last_three_month(date_time: str):
     last_time = datetime.datetime.strptime(date_time, "%Y-%m-%d %H:%M:%S")
     first_month = last_time - datetime.timedelta(days=90)
     return first_month
-
-
-
