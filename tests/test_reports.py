@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pandas as pd
@@ -7,59 +7,114 @@ import pytest
 
 from project_1.reports import (spending_by_category, spending_by_weekday,
                                spending_by_workday)
+from project_1.utils import get_last_three_month
+
 
 @pytest.fixture
-def sample_transactions():
-    return pd.DataFrame(
-        {
-            "Дата операции": [
-                "01.12.2023 10:00:00",
-                "01.11.2023 10:00:00",
-                "01.01.2022 10:00:00",  # Изменили год на 2022, чтобы точно не попало
-                "15.11.2023 12:00:00",
-            ],
-            "Категория": ["Супермаркеты", "Супермаркеты", "Супермаркеты", "Транспорт"],
-            "Сумма": [100, 200, 500, 300],
-        }
-    )
+def sample_transactions_df():
+    data = {
+        "Дата операции": [
+            "01.01.2023",
+            "15.01.2023",
+            "01.02.2023",
+            "10.02.2023",
+            "05.03.2023",
+            "20.03.2023",
+            "01.04.2023",
+            "10.04.2023",
+            "05.05.2023",
+            "20.05.2023",
+            "01.06.2023",
+            "15.06.2023",
+            "01.07.2023",
+            "10.07.2023",
+            "05.08.2023",
+            "20.08.2023",
+            "01.09.2023",
+            "10.09.2023",
+            "05.10.2023",
+            "20.10.2023",
+        ],
+        "Категория": [
+            "Еда",
+            "Транспорт",
+            "Еда",
+            "Развлечения",
+            "Еда",
+            "Транспорт",
+            "Еда",
+            "Развлечения",
+            "Еда",
+            "Транспорт",
+            "Еда",
+            "Развлечения",
+            "Еда",
+            "Транспорт",
+            "Еда",
+            "Развлечения",
+            "Еда",
+            "Транспорт",
+            "Еда",
+            "Развлечения",
+        ],
+        "Сумма": [100, 50, 120, 80, 110, 60, 130, 90, 140, 70, 150, 100, 160, 80, 170, 110, 180, 90, 190, 120],
+    }
+    return pd.DataFrame(data)
 
 
-@pytest.mark.parametrize(
-    "category, input_date, expected_count",
-    [
-        ("Супермаркеты", "2023-12-31 23:59:59", 2),
-        ("Супермаркеты", "2024-05-01 00:00:00", 0),
-        ("Аптеки", "2023-12-31 23:59:59", 0),
-        ("Транспорт", "2023-12-31 23:59:59", 1),
-    ],
-)
-@patch("src.project_1.reports.get_last_three_month")  # Укажите правильный путь к функции
-def test_spending_by_category_success(mock_get_date, category, input_date, expected_count, sample_transactions):
-
-    mock_get_date.return_value = datetime.strptime("2023-10-01 00:00:00", "%Y-%m-%d %H:%M:%S")
-
-    result_json = spending_by_category(sample_transactions, category, input_date)
-
-    result_list = json.loads(result_json)
-    assert isinstance(result_list, list)
-    assert len(result_list) == expected_count
-
-    if expected_count > 0:
-        for item in result_list:
-            assert item["Категория"] == category
-
-
-def test_spending_by_category_empty_df():
-    """Тест на пустой DataFrame"""
-    df_empty = pd.DataFrame()
-    result = spending_by_category(df_empty, "Любая", "2023-01-01 00:00:00")
+def test_spending_by_category_empty():
+    # Тест на пустой DataFrame
+    empty_df = pd.DataFrame()
+    result = spending_by_category(empty_df, "Еда", "2023-10-20 00:00:00")
     assert result == "Нет данных"
 
 
-def test_spending_by_category_invalid_date_format(sample_transactions):
-    """Тест на ошибку формата даты"""
-    with pytest.raises(ValueError):
-        spending_by_category(sample_transactions, "Супермаркеты", "31-12-2023")  # Неверный формат
+def test_spending_by_category_no_category(sample_transactions_df):
+    # Тест на категорию, которой нет
+    date = "2023-10-20 00:00:00"
+    result = spending_by_category(sample_transactions_df, "Одежда", date)
+    parsed_result = json.loads(result)
+    assert len(parsed_result) == 0
+
+
+def test_spending_by_category_with_specific_date(sample_transactions_df):
+    date = "2023-10-20 00:00:00"
+    category = "Еда"
+    result = spending_by_category(sample_transactions_df, category, date)
+    parsed_result = json.loads(result)
+
+    assert len(parsed_result) == 3
+    assert all(item["Категория"] == category for item in parsed_result)
+    assert parsed_result[0]["Дата операции"].startswith("2023-08-05")
+    assert parsed_result[1]["Дата операции"].startswith("2023-09-01")
+    assert parsed_result[2]["Дата операции"].startswith("2023-10-05")
+
+
+# Параметризованный тест
+@pytest.mark.parametrize(
+    "test_date, category, expected_count, expected_first_date, expected_last_date",
+    [
+        ("2023-10-20 00:00:00", "Еда", 3, "2023-08-05", "2023-10-05"),
+        ("2023-07-15 00:00:00", "Транспорт", 2, "2023-05-20", "2023-07-10"),
+        ("2023-05-01 00:00:00", "Развлечения", 2, "2023-02-10", "2023-04-10"),
+        ("2023-01-01 00:00:00", "Еда", 1, "2023-01-01", "2023-01-01"),
+        ("2024-01-01 00:00:00", "Еда", 1, "2023-10-05", "2023-10-05"),
+        # Несуществующая категория
+        ("2023-10-20 00:00:00", "Несуществующая", 0, None, None),
+    ],
+)
+def test_spending_by_category_param(
+    sample_transactions_df, test_date, category, expected_count, expected_first_date, expected_last_date
+):
+    result = spending_by_category(sample_transactions_df, category, test_date)
+    parsed_result = json.loads(result)
+
+    assert len(parsed_result) == expected_count
+
+    if expected_count > 0:
+        assert all(item["Категория"] == category for item in parsed_result)
+        assert parsed_result[0]["Дата операции"].startswith(expected_first_date)
+        assert parsed_result[-1]["Дата операции"].startswith(expected_last_date)
 
 
 # Тесты к функции spending_by_workday

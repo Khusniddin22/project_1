@@ -52,3 +52,6 @@ def even_info(date_time: str, range: str = "M") -> Dict[str, Any]:
     json_data = json.dumps(data, ensure_ascii=False, indent=4)
 
     return json_data
+
+
+# print(even_info("2018-01-01 12:49:53"))

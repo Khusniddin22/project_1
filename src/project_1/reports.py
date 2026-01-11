@@ -63,18 +63,17 @@ def spending_by_category(transactions: pd.DataFrame, category: str, date: Option
         return "Нет данных"
 
     if date is None:
-        to_day = time.strftime("%d.%m.%Y %H:%M:%S")
+        to_day = datetime.now()
     else:
         to_day = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
-    end_date = to_day.strftime("%d.%m.%Y %H:%M:%S")
 
     starting_date = get_last_three_month(str(to_day))
-    starting_date = starting_date.strftime("%d.%m.%Y %H:%M:%S")
 
     transactions["Дата операции"] = pd.to_datetime(transactions["Дата операции"], dayfirst=True)
-    filtered_transactions = transactions[
-        (transactions["Дата операции"] >= starting_date) & (transactions["Дата операции"] <= end_date)
-    ]
+
+    mask = (transactions["Дата операции"] >= starting_date) & (transactions["Дата операции"] <= to_day)
+    filtered_transactions = transactions[mask]
+
     sort_transactions = filtered_transactions[filtered_transactions["Категория"] == category]
     json_string = sort_transactions.to_json(orient="records", force_ascii=False, indent=4, date_format="iso")
 
@@ -83,7 +82,6 @@ def spending_by_category(transactions: pd.DataFrame, category: str, date: Option
 
 
 # df = get_df_transactions(path_file)
-
 # print(spending_by_category(df, "Ж/д билеты", "2018-05-20 00:00:00"))
 
 

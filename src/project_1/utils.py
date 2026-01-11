@@ -294,6 +294,9 @@ def get_data_time_with_range(date_time: str, date_format: str = "%Y-%m-%d %H:%M:
         return [dt.strftime("%d.%m.%Y %H:%M:%S")]
 
 
+# print(get_data_time_with_range("2018-01-02 00:00:00"))
+
+
 def get_expenses(df_sorted: DataFrame) -> dict:
     """
     Функция принимает таблицу Dataframe и
@@ -301,10 +304,13 @@ def get_expenses(df_sorted: DataFrame) -> dict:
     """
 
     logger_utils.debug("Вызвана функция get_expenses с аргументами df_sorted")
+    if df_sorted.empty:
+        return {}
+    else:
+        df_filtered = df_sorted[["Сумма операции", "Категория"]]
     total_amount = 0
     category_expenses = []
     transfers_and_cash = []
-    df_filtered = df_sorted[["Сумма операции", "Категория"]]
 
     # Находим общую сумму расходов (пополнения не учитываем)
     for index, row in df_filtered.iterrows():
@@ -376,7 +382,10 @@ def get_income(df_sorted: DataFrame) -> dict:
     logger_utils.debug("Вызвана функция get_income с аргументами df_sorted")
     total_amount = 0
     category_income = []
-    df_filtered = df_sorted[["Сумма операции", "Категория"]]
+    if df_sorted.empty:
+        return {}
+    else:
+        df_filtered = df_sorted[["Сумма операции", "Категория"]]
 
     for index, row in df_filtered.iterrows():
         if row["Сумма операции"] > 0:

@@ -6,9 +6,9 @@ from src.project_1.utils import get_expenses, get_income
 # Тесты для функции get_expenses
 def test_get_expenses_empty_df():
     """Тест для пустого DataFrame."""
-    df = pd.DataFrame(columns=["Сумма операции", "Категория"])
+    df = pd.DataFrame()
     result = get_expenses(df)
-    assert result == {"total_amount": 0.0, "main": [], "transfers_and_cash": []}
+    assert result == {}
 
 
 def test_get_expenses_only_transfers_and_cash():
@@ -43,10 +43,7 @@ def test_get_income_empty_df():
     """Тест для пустого DataFrame"""
     df = pd.DataFrame(columns=["Сумма операции", "Категория"])
     result = get_income(df)
-    assert result == {
-        "total_amount": 0.0,
-        "main": [],
-    }
+    assert result == {}
 
 
 def test_get_income_only_one_category():
